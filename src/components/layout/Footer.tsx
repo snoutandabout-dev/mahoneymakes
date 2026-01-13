@@ -1,4 +1,4 @@
-import { Heart, Instagram, Facebook, Mail, Phone } from "lucide-react";
+import { Heart, Instagram, Mail, Phone } from "lucide-react";
 import logo from "@/assets/mahoney-makes-logo.png";
 
 export function Footer() {
@@ -15,16 +15,12 @@ export function Footer() {
             </p>
             <div className="flex gap-4 pt-2">
               <a
-                href="#"
+                href="https://instagram.com/mahoney_makes"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Instagram size={20} />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Facebook size={20} />
               </a>
             </div>
           </div>

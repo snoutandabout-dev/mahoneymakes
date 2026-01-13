@@ -32,7 +32,7 @@ export function AboutSection() {
 
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                Hi, I'm Sarah! What started as a love for baking in my grandmother's 
+                Hi, I'm Amanda! What started as a love for baking in my grandmother's 
                 kitchen has blossomed into a passion that I get to share with my 
                 community every single day.
               </p>
