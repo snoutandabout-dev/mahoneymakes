@@ -44,7 +44,7 @@ const Register = () => {
         <Card className="shadow-warm border-primary/10">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logo} alt="Mahoney Makes" className="h-24 w-auto" />
+              <img src={logo} alt="Mahoney Makes" className="h-48 w-auto" />
             </div>
             <p className="text-base text-muted-foreground">
               Create your baker dashboard

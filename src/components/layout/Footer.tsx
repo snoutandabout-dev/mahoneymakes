@@ -8,7 +8,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="space-y-4">
-            <img src={logo} alt="Mahoney Makes" className="h-20 w-auto" />
+            <img src={logo} alt="Mahoney Makes" className="h-48 w-auto" />
             <p className="text-muted-foreground leading-relaxed">
               Handcrafted with love, baked with passion. Every cake tells a story,
               and we're here to make yours unforgettable.
@@ -53,18 +53,18 @@ export function Footer() {
             <h4 className="font-display text-xl font-semibold">Get in Touch</h4>
             <div className="space-y-3">
               <a
-                href="mailto:hello@sweetdelights.com"
+                href="mailto:mahoneymakes@gmail.com"
                 className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail size={18} />
-                hello@sweetdelights.com
+                mahoneymakes@gmail.com
               </a>
               <a
-                href="tel:+15551234567"
+                href="tel:+14045830799"
                 className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors"
               >
                 <Phone size={18} />
-                (555) 123-4567
+                (404) 583-0799
               </a>
             </div>
           </div>
