@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,10 +13,11 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Send, Sparkles } from "lucide-react";
+import { CalendarIcon, Send, Sparkles, ImagePlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const cakeTypes = [
   "Classic Vanilla",
@@ -45,21 +46,104 @@ const eventTypes = [
 export function OrderSection() {
   const [date, setDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visionImages, setVisionImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + visionImages.length > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+    
+    const newImages = [...visionImages, ...files];
+    setVisionImages(newImages);
+    
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setVisionImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    toast.success("Thank you for your order inquiry! I'll be in touch within 24 hours.", {
-      description: "Check your email for confirmation.",
-    });
+    try {
+      const formData = new FormData(e.currentTarget);
+      
+      // Create the order first
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          customer_name: formData.get("name") as string,
+          customer_email: formData.get("email") as string,
+          customer_phone: formData.get("phone") as string,
+          cake_type: formData.get("cakeType") as string,
+          event_type: formData.get("eventType") as string,
+          event_date: date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
+          servings: formData.get("servings") ? parseInt(formData.get("servings") as string) : null,
+          order_notes: formData.get("details") as string,
+          user_id: "00000000-0000-0000-0000-000000000000", // Public submission placeholder
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Upload vision board images
+      if (visionImages.length > 0 && orderData) {
+        for (const file of visionImages) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${orderData.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("vision-board")
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            continue;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("vision-board")
+            .getPublicUrl(fileName);
+
+          // Save reference to database
+          await supabase.from("order_vision_images").insert({
+            order_id: orderData.id,
+            image_url: publicUrl,
+            user_id: "00000000-0000-0000-0000-000000000000",
+          });
+        }
+      }
+
+      toast.success("Thank you for your order inquiry! I'll be in touch within 24 hours.", {
+        description: "Check your email for confirmation.",
+      });
+      
+      (e.target as HTMLFormElement).reset();
+      setDate(undefined);
+      setVisionImages([]);
+      setImagePreviews([]);
+    } catch (error) {
+      console.error("Order submission error:", error);
+      toast.error("Failed to submit order. Please try again.");
+    }
     
     setIsSubmitting(false);
-    (e.target as HTMLFormElement).reset();
-    setDate(undefined);
   };
 
   return (
@@ -219,6 +303,56 @@ export function OrderSection() {
                   required
                   className="bg-background resize-none"
                 />
+              </div>
+
+              {/* Vision Board Upload */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <ImagePlus className="w-4 h-4" />
+                  Vision Board (Optional)
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Upload up to 5 inspiration images for your cake design
+                </p>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                
+                <div className="flex flex-wrap gap-3">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Vision ${index + 1}`}
+                        className="w-20 h-20 object-cover rounded-lg border-2 border-primary/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {visionImages.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-20 h-20 border-2 border-dashed border-primary/30 rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                    >
+                      <ImagePlus className="w-6 h-6" />
+                      <span className="text-xs mt-1">Add</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="pt-4">
