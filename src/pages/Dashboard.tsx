@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { BusinessCalendar } from "@/components/dashboard/BusinessCalendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +8,6 @@ import {
   ClipboardList, 
   DollarSign, 
   AlertTriangle, 
-  TrendingUp,
   Calendar,
   Clock
 } from "lucide-react";
@@ -172,6 +172,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Business Calendar */}
+        <BusinessCalendar />
 
         {/* Recent Orders */}
         <Card>
