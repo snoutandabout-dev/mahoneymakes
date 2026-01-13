@@ -38,13 +38,13 @@ export function GallerySection() {
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-primary font-medium tracking-wider uppercase text-sm">
-            Our Creations
+            My Creations
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-semibold mt-2">
             Sweet <span className="text-primary">Gallery</span>
           </h2>
           <p className="text-muted-foreground mt-4 leading-relaxed">
-            Take a peek at some of our favorite creations. Each one is made with 
+            Take a peek at some of my favorite creations. Each one is made with 
             love and attention to every delicious detail.
           </p>
         </div>

@@ -49,10 +49,10 @@ export function MenuSection() {
       <div className="container">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-primary font-medium tracking-wider uppercase text-sm">
-            Our Offerings
+            What I Offer
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-semibold mt-2">
-            Explore Our <span className="text-primary">Menu</span>
+            Explore the <span className="text-primary">Menu</span>
           </h2>
           <p className="text-muted-foreground mt-4 leading-relaxed">
             From classic favorites to custom creations, find the perfect sweet 
