@@ -50,18 +50,36 @@ export function OrderSection() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per image
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + visionImages.length > 5) {
       toast.error("Maximum 5 images allowed");
       return;
     }
+
+    // Validate file sizes and types
+    const validFiles: File[] = [];
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} is too large. Maximum size is 5MB.`);
+        continue;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not a valid image file.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
     
-    const newImages = [...visionImages, ...files];
+    const newImages = [...visionImages, ...validFiles];
     setVisionImages(newImages);
     
     // Create previews
-    files.forEach(file => {
+    validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreviews(prev => [...prev, reader.result as string]);
@@ -113,7 +131,10 @@ export function OrderSection() {
             .upload(fileName, file);
 
           if (uploadError) {
-            console.error("Upload error:", uploadError);
+            // Log only in development
+            if (import.meta.env.DEV) {
+              console.error("Upload error:", uploadError);
+            }
             continue;
           }
 
@@ -138,7 +159,10 @@ export function OrderSection() {
       setVisionImages([]);
       setImagePreviews([]);
     } catch (error) {
-      console.error("Order submission error:", error);
+      // Log only in development
+      if (import.meta.env.DEV) {
+        console.error("Order submission error:", error);
+      }
       toast.error("Failed to submit order. Please try again.");
     }
     
@@ -311,7 +335,10 @@ export function OrderSection() {
                   Vision Board (Optional)
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Upload up to 5 inspiration images for your cake design
+                  Upload up to 5 inspiration images for your cake design (max 5MB each).
+                  <span className="block mt-1 text-xs">
+                    Note: Uploaded images may be used for order consultation purposes.
+                  </span>
                 </p>
                 
                 <input

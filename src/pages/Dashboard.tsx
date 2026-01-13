@@ -91,7 +91,10 @@ const Dashboard = () => {
       });
       setRecentOrders(orders || []);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      // Log only in development
+      if (import.meta.env.DEV) {
+        console.error("Error fetching dashboard data:", error);
+      }
     } finally {
       setLoading(false);
     }
