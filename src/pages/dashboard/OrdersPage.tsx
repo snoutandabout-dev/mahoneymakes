@@ -21,10 +21,18 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Calendar, Search, Eye } from "lucide-react";
+import { Plus, Calendar, Search, Eye, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Dialog as ImageDialog, DialogContent as ImageDialogContent } from "@/components/ui/dialog";
+
+interface VisionImage {
+  id: string;
+  image_url: string;
+  caption: string | null;
+  order_id: string;
+}
 
 interface Order {
   id: string;
@@ -40,6 +48,7 @@ interface Order {
   deposit_amount: number;
   total_amount: number;
   created_at: string;
+  vision_images?: VisionImage[];
 }
 
 const statusOptions = [
@@ -64,6 +73,8 @@ const OrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [visionImages, setVisionImages] = useState<VisionImage[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     customer_name: "",
@@ -94,7 +105,21 @@ const OrdersPage = () => {
     } else {
       setOrders(data || []);
     }
+    
+    // Fetch vision images
+    const { data: imagesData } = await supabase
+      .from("order_vision_images")
+      .select("*");
+    
+    if (imagesData) {
+      setVisionImages(imagesData);
+    }
+    
     setLoading(false);
+  };
+
+  const getOrderVisionImages = (orderId: string) => {
+    return visionImages.filter(img => img.order_id === orderId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -391,10 +416,31 @@ const OrdersPage = () => {
                         <Badge variant="outline" className={getStatusColor(order.status)}>
                           {order.status.replace("_", " ")}
                         </Badge>
+                        {getOrderVisionImages(order.id).length > 0 && (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <ImageIcon className="h-3 w-3" />
+                            {getOrderVisionImages(order.id).length}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-muted-foreground">{order.cake_type}</p>
                       {order.customer_phone && (
                         <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
+                      )}
+                      
+                      {/* Vision Board Preview */}
+                      {getOrderVisionImages(order.id).length > 0 && (
+                        <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                          {getOrderVisionImages(order.id).map((img) => (
+                            <img
+                              key={img.id}
+                              src={img.image_url}
+                              alt="Vision"
+                              className="w-12 h-12 object-cover rounded-lg border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                              onClick={() => setSelectedImage(img.image_url)}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-6">
@@ -422,6 +468,19 @@ const OrdersPage = () => {
             ))}
           </div>
         )}
+
+        {/* Image Preview Dialog */}
+        <ImageDialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <ImageDialogContent className="max-w-3xl p-2 bg-background">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Vision Board"
+                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+              />
+            )}
+          </ImageDialogContent>
+        </ImageDialog>
       </div>
     </DashboardLayout>
   );
