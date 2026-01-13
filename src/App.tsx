@@ -7,7 +7,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import OrdersPage from "./pages/dashboard/OrdersPage";
 import PaymentsPage from "./pages/dashboard/PaymentsPage";
@@ -15,6 +14,7 @@ import SuppliesPage from "./pages/dashboard/SuppliesPage";
 import InventoryPage from "./pages/dashboard/InventoryPage";
 import SpecialsPage from "./pages/dashboard/SpecialsPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
+import UsersPage from "./pages/dashboard/UsersPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,7 +29,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/dashboard/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/dashboard/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
@@ -37,6 +36,7 @@ const App = () => (
             <Route path="/dashboard/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
             <Route path="/dashboard/specials" element={<ProtectedRoute><SpecialsPage /></ProtectedRoute>} />
             <Route path="/dashboard/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/dashboard/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
