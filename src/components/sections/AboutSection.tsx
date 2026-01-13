@@ -1,4 +1,4 @@
-import bakerImage from "@/assets/baker-portrait.jpg";
+import bakerImage from "@/assets/amanda-portrait.jpg";
 
 export function AboutSection() {
   return (
