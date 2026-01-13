@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import OrdersPage from "./pages/dashboard/OrdersPage";
+import RequestsPage from "./pages/dashboard/RequestsPage";
 import PaymentsPage from "./pages/dashboard/PaymentsPage";
 import SuppliesPage from "./pages/dashboard/SuppliesPage";
 import InventoryPage from "./pages/dashboard/InventoryPage";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/dashboard/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+            <Route path="/dashboard/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
             <Route path="/dashboard/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
             <Route path="/dashboard/supplies" element={<ProtectedRoute><SuppliesPage /></ProtectedRoute>} />
             <Route path="/dashboard/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
