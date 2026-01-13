@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   ClipboardList,
+  Inbox,
   DollarSign,
   Package,
   ClipboardCheck,
@@ -23,6 +24,7 @@ import logo from "@/assets/mahoney-makes-logo.png";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: Inbox, label: "Requests", href: "/dashboard/requests" },
   { icon: ClipboardList, label: "Orders", href: "/dashboard/orders" },
   { icon: DollarSign, label: "Payments", href: "/dashboard/payments" },
   { icon: Package, label: "Supplies", href: "/dashboard/supplies" },

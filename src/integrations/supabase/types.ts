@@ -47,6 +47,83 @@ export type Database = {
         }
         Relationships: []
       }
+      order_request_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_request_images_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "order_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_requests: {
+        Row: {
+          budget: string | null
+          cake_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          event_date: string
+          event_type: string | null
+          id: string
+          request_details: string | null
+          servings: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: string | null
+          cake_type: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          event_date: string
+          event_type?: string | null
+          id?: string
+          request_details?: string | null
+          servings?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: string | null
+          cake_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          event_date?: string
+          event_type?: string | null
+          id?: string
+          request_details?: string | null
+          servings?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_supplies: {
         Row: {
           cost: number | null

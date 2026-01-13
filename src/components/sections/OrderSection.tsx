@@ -82,9 +82,9 @@ export function OrderSection() {
     try {
       const formData = new FormData(e.currentTarget);
       
-      // Create the order first
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
+      // Create the order request
+      const { data: requestData, error: requestError } = await supabase
+        .from("order_requests")
         .insert({
           customer_name: formData.get("name") as string,
           customer_email: formData.get("email") as string,
@@ -93,20 +93,20 @@ export function OrderSection() {
           event_type: formData.get("eventType") as string,
           event_date: date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
           servings: formData.get("servings") ? parseInt(formData.get("servings") as string) : null,
-          order_notes: formData.get("details") as string,
-          user_id: "00000000-0000-0000-0000-000000000000", // Public submission placeholder
-          status: "pending",
+          budget: formData.get("budget") as string,
+          request_details: formData.get("details") as string,
+          status: "new",
         })
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (requestError) throw requestError;
 
       // Upload vision board images
-      if (visionImages.length > 0 && orderData) {
+      if (visionImages.length > 0 && requestData) {
         for (const file of visionImages) {
           const fileExt = file.name.split(".").pop();
-          const fileName = `${orderData.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const fileName = `requests/${requestData.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
             .from("vision-board")
@@ -122,10 +122,9 @@ export function OrderSection() {
             .getPublicUrl(fileName);
 
           // Save reference to database
-          await supabase.from("order_vision_images").insert({
-            order_id: orderData.id,
+          await supabase.from("order_request_images").insert({
+            request_id: requestData.id,
             image_url: publicUrl,
-            user_id: "00000000-0000-0000-0000-000000000000",
           });
         }
       }
