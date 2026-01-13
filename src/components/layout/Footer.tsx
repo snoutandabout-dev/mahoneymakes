@@ -1,4 +1,5 @@
 import { Heart, Instagram, Facebook, Mail, Phone } from "lucide-react";
+import logo from "@/assets/mahoney-makes-logo.png";
 
 export function Footer() {
   return (
@@ -7,9 +8,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="font-display text-2xl font-semibold">
-              Mahoney <span className="text-primary">Makes</span>
-            </h3>
+            <img src={logo} alt="Mahoney Makes" className="h-20 w-auto" />
             <p className="text-muted-foreground leading-relaxed">
               Handcrafted with love, baked with passion. Every cake tells a story,
               and we're here to make yours unforgettable.
