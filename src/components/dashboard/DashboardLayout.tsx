@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import logo from "@/assets/mahoney-makes-logo.png";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -64,11 +65,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-sidebar-border">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <span className="font-display text-xl font-semibold text-sidebar-foreground">
-                Sweet <span className="text-sidebar-primary">Delights</span>
-              </span>
+          <div className="p-4 border-b border-sidebar-border">
+            <Link to="/dashboard" className="flex items-center">
+              <img src={logo} alt="Mahoney Makes" className="h-20 w-auto" />
             </Link>
             <p className="text-xs text-muted-foreground mt-1">Baker Dashboard</p>
           </div>
@@ -126,9 +125,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-display text-lg font-semibold">
-            Sweet <span className="text-primary">Delights</span>
-          </span>
+          <img src={logo} alt="Mahoney Makes" className="h-12 w-auto" />
           <div className="w-10" />
         </header>
 
