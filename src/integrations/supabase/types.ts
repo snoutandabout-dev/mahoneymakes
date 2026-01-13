@@ -14,7 +14,331 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      inventory_checklist: {
+        Row: {
+          created_at: string
+          id: string
+          is_checked: boolean | null
+          item_name: string
+          notes: string | null
+          priority: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          item_name: string
+          notes?: string | null
+          priority?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          item_name?: string
+          notes?: string | null
+          priority?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      order_supplies: {
+        Row: {
+          cost: number | null
+          created_at: string
+          id: string
+          order_id: string
+          quantity_used: number
+          supply_id: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          id?: string
+          order_id: string
+          quantity_used: number
+          supply_id: string
+          user_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          quantity_used?: number
+          supply_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_supplies_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_supplies_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "supplies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_vision_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          order_id: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          order_id: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          order_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_vision_images_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          cake_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          deposit_amount: number | null
+          event_date: string
+          event_type: string | null
+          id: string
+          order_notes: string | null
+          servings: number | null
+          status: string
+          total_amount: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cake_type: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          deposit_amount?: number | null
+          event_date: string
+          event_type?: string | null
+          id?: string
+          order_notes?: string | null
+          servings?: number | null
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cake_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          deposit_amount?: number | null
+          event_date?: string
+          event_type?: string | null
+          id?: string
+          order_notes?: string | null
+          servings?: number | null
+          status?: string
+          total_amount?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          payment_date: string
+          payment_method: string
+          payment_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          payment_date?: string
+          payment_method: string
+          payment_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          payment_date?: string
+          payment_method?: string
+          payment_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      seasonal_specials: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          order_count: number | null
+          price: number | null
+          season: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_count?: number | null
+          price?: number | null
+          season: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_count?: number | null
+          price?: number | null
+          season?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      supplies: {
+        Row: {
+          category: string
+          created_at: string
+          current_stock: number | null
+          id: string
+          is_low_stock: boolean | null
+          low_stock_threshold: number | null
+          name: string
+          unit: string
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_stock?: number | null
+          id?: string
+          is_low_stock?: boolean | null
+          low_stock_threshold?: number | null
+          name: string
+          unit: string
+          unit_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_stock?: number | null
+          id?: string
+          is_low_stock?: boolean | null
+          low_stock_threshold?: number | null
+          name?: string
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
