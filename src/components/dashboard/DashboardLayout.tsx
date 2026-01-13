@@ -15,6 +15,7 @@ import {
   X,
   ChevronLeft,
   Home,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ const sidebarItems = [
   { icon: ClipboardCheck, label: "Inventory", href: "/dashboard/inventory" },
   { icon: Sparkles, label: "Specials", href: "/dashboard/specials" },
   { icon: BarChart3, label: "Reports", href: "/dashboard/reports" },
+  { icon: Users, label: "Team", href: "/dashboard/users" },
 ];
 
 interface DashboardLayoutProps {
