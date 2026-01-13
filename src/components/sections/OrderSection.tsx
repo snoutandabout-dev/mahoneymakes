@@ -13,6 +13,16 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Honeypot field styles - must be invisible to users but visible to bots
+const honeypotStyles: React.CSSProperties = {
+  position: 'absolute',
+  left: '-9999px',
+  opacity: 0,
+  height: 0,
+  width: 0,
+  overflow: 'hidden',
+};
 import { CalendarIcon, Send, Sparkles, ImagePlus, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -100,6 +110,22 @@ export function OrderSection() {
     try {
       const formData = new FormData(e.currentTarget);
       
+      // Check honeypot - if filled, silently "succeed" to fool bots
+      const honeypotValue = formData.get("website_url") as string;
+      if (honeypotValue) {
+        // Bot detected - pretend success but don't submit
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Fake delay
+        toast.success("Thank you for your order inquiry! I'll be in touch within 24 hours.", {
+          description: "Check your email for confirmation.",
+        });
+        (e.target as HTMLFormElement).reset();
+        setDate(undefined);
+        setVisionImages([]);
+        setImagePreviews([]);
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Submit through rate-limited edge function
       const response = await supabase.functions.invoke("submit-order-request", {
         body: {
@@ -112,6 +138,7 @@ export function OrderSection() {
           servings: formData.get("servings") ? parseInt(formData.get("servings") as string) : null,
           budget: formData.get("budget") as string,
           request_details: formData.get("details") as string,
+          honeypot: honeypotValue, // Send for server-side verification too
         },
       });
 
@@ -207,6 +234,17 @@ export function OrderSection() {
           </CardHeader>
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Honeypot field - hidden from users, visible to bots */}
+              <div style={honeypotStyles} aria-hidden="true">
+                <label htmlFor="website_url">Website URL (leave blank)</label>
+                <input
+                  type="text"
+                  id="website_url"
+                  name="website_url"
+                  autoComplete="off"
+                />
+              </div>
+              
               {/* Contact Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">

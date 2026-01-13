@@ -16,6 +16,7 @@ interface OrderRequestData {
   servings: number | null;
   budget: string;
   request_details: string;
+  honeypot?: string; // Honeypot field for spam detection
 }
 
 serve(async (req) => {
@@ -62,6 +63,19 @@ serve(async (req) => {
 
     // Parse request body
     const body: OrderRequestData = await req.json();
+
+    // Check honeypot - if filled, silently "succeed" to fool bots
+    if (body.honeypot) {
+      console.log("Honeypot triggered - bot detected");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          id: "fake-" + crypto.randomUUID(),
+          message: "Order request submitted successfully" 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate required fields
     const requiredFields = ["customer_name", "customer_phone", "cake_type", "event_date", "request_details"];
