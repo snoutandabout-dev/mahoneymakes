@@ -12,7 +12,7 @@ import mochaCake from "@/assets/gallery-mocha-cake.jpg";
 const galleryImages = [
   { src: chocolateDrip, alt: "Chocolate drip cake with gold and white sprinkles", category: "Chocolate" },
   { src: vanillaChocolate, alt: "Vanilla cake with chocolate pieces and gold decorations", category: "Specialty" },
-  { src: colorfulLayer, alt: "Colorful layered cake with pastel frosting", category: "Layer Cakes" },
+  { src: colorfulLayer, alt: "Colorful cookie cake with pastel frosting", category: "Cookie Cakes" },
   { src: numberCake, alt: "Number 10 cake with macarons and mint frosting", category: "Number Cakes" },
   { src: retroBirthday, alt: "Retro 90s themed birthday cake with teal and pink", category: "Birthday" },
   { src: mochaCake, alt: "Elegant mocha frosted cake with gold accents", category: "Classic" },
