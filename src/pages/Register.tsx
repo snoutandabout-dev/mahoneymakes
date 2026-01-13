@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import logo from "@/assets/mahoney-makes-logo.png";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -41,13 +42,13 @@ const Register = () => {
         </Link>
         
         <Card className="shadow-warm border-primary/10">
-          <CardHeader className="text-center">
-            <CardTitle className="font-display text-3xl">
-              Mahoney <span className="text-primary">Makes</span>
-            </CardTitle>
-            <CardDescription className="text-base">
+          <CardHeader className="text-center space-y-4">
+            <div className="flex justify-center">
+              <img src={logo} alt="Mahoney Makes" className="h-24 w-auto" />
+            </div>
+            <p className="text-base text-muted-foreground">
               Create your baker dashboard
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">

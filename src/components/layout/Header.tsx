@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/mahoney-makes-logo.png";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -47,9 +48,7 @@ export function Header() {
     >
       <div className="container flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="font-display text-2xl md:text-3xl font-semibold text-foreground">
-            Mahoney <span className="text-primary">Makes</span>
-          </span>
+          <img src={logo} alt="Mahoney Makes" className="h-12 md:h-16 w-auto" />
         </Link>
 
         {/* Desktop Navigation */}
