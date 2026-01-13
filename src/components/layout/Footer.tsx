@@ -11,7 +11,7 @@ export function Footer() {
             <img src={logo} alt="Mahoney Makes" className="h-48 w-auto" />
             <p className="text-muted-foreground leading-relaxed">
               Handcrafted with love, baked with passion. Every cake tells a story,
-              and we're here to make yours unforgettable.
+              and I'm here to make yours unforgettable.
             </p>
             <div className="flex gap-4 pt-2">
               <a
@@ -33,7 +33,7 @@ export function Footer() {
                 About Me
               </a>
               <a href="/#menu" className="text-muted-foreground hover:text-primary transition-colors">
-                Our Menu
+                Menu
               </a>
               <a href="/#gallery" className="text-muted-foreground hover:text-primary transition-colors">
                 Gallery
