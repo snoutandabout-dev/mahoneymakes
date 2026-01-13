@@ -2,20 +2,20 @@ import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
-import chocolateCake from "@/assets/gallery-chocolate-cake.jpg";
-import weddingCake from "@/assets/gallery-wedding-cake.jpg";
-import applePie from "@/assets/gallery-apple-pie.jpg";
-import cupcakes from "@/assets/gallery-cupcakes.jpg";
-import redVelvet from "@/assets/gallery-red-velvet.jpg";
-import birthdayCake from "@/assets/gallery-birthday-cake.jpg";
+import chocolateDrip from "@/assets/gallery-chocolate-drip.jpg";
+import vanillaChocolate from "@/assets/gallery-vanilla-chocolate.jpg";
+import colorfulLayer from "@/assets/gallery-colorful-layer.jpg";
+import numberCake from "@/assets/gallery-number-cake.jpg";
+import retroBirthday from "@/assets/gallery-retro-birthday.jpg";
+import mochaCake from "@/assets/gallery-mocha-cake.jpg";
 
 const galleryImages = [
-  { src: weddingCake, alt: "Elegant three-tier wedding cake with roses", category: "Wedding" },
-  { src: chocolateCake, alt: "Rich chocolate layer cake", category: "Chocolate" },
-  { src: cupcakes, alt: "Assorted pastel cupcakes", category: "Cupcakes" },
-  { src: applePie, alt: "Rustic apple pie with lattice crust", category: "Pies" },
-  { src: birthdayCake, alt: "Pink birthday cake with berries", category: "Birthday" },
-  { src: redVelvet, alt: "Red velvet cake slice", category: "Classic" },
+  { src: chocolateDrip, alt: "Chocolate drip cake with gold and white sprinkles", category: "Chocolate" },
+  { src: vanillaChocolate, alt: "Vanilla cake with chocolate pieces and gold decorations", category: "Specialty" },
+  { src: colorfulLayer, alt: "Colorful layered cake with pastel frosting", category: "Layer Cakes" },
+  { src: numberCake, alt: "Number 10 cake with macarons and mint frosting", category: "Number Cakes" },
+  { src: retroBirthday, alt: "Retro 90s themed birthday cake with teal and pink", category: "Birthday" },
+  { src: mochaCake, alt: "Elegant mocha frosted cake with gold accents", category: "Classic" },
 ];
 
 export function GallerySection() {
