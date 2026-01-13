@@ -100,10 +100,9 @@ export function OrderSection() {
     try {
       const formData = new FormData(e.currentTarget);
       
-      // Create the order request
-      const { data: requestData, error: requestError } = await supabase
-        .from("order_requests")
-        .insert({
+      // Submit through rate-limited edge function
+      const response = await supabase.functions.invoke("submit-order-request", {
+        body: {
           customer_name: formData.get("name") as string,
           customer_email: formData.get("email") as string,
           customer_phone: formData.get("phone") as string,
@@ -113,18 +112,32 @@ export function OrderSection() {
           servings: formData.get("servings") ? parseInt(formData.get("servings") as string) : null,
           budget: formData.get("budget") as string,
           request_details: formData.get("details") as string,
-          status: "new",
-        })
-        .select()
-        .single();
+        },
+      });
 
-      if (requestError) throw requestError;
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to submit order request");
+      }
+
+      const result = response.data;
+      
+      if (!result.success) {
+        // Handle rate limit error
+        if (result.error?.includes("Too many requests")) {
+          toast.error("You've submitted too many requests. Please try again in an hour.");
+          setIsSubmitting(false);
+          return;
+        }
+        throw new Error(result.error || "Failed to submit order request");
+      }
+
+      const requestId = result.id;
 
       // Upload vision board images
-      if (visionImages.length > 0 && requestData) {
+      if (visionImages.length > 0 && requestId) {
         for (const file of visionImages) {
           const fileExt = file.name.split(".").pop();
-          const fileName = `requests/${requestData.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const fileName = `requests/${requestId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
           
           const { error: uploadError } = await supabase.storage
             .from("vision-board")
@@ -144,7 +157,7 @@ export function OrderSection() {
 
           // Save reference to database
           await supabase.from("order_request_images").insert({
-            request_id: requestData.id,
+            request_id: requestId,
             image_url: publicUrl,
           });
         }
