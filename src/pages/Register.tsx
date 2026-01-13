@@ -43,7 +43,7 @@ const Register = () => {
         <Card className="shadow-warm border-primary/10">
           <CardHeader className="text-center">
             <CardTitle className="font-display text-3xl">
-              Sweet <span className="text-primary">Delights</span>
+              Mahoney <span className="text-primary">Makes</span>
             </CardTitle>
             <CardDescription className="text-base">
               Create your baker dashboard

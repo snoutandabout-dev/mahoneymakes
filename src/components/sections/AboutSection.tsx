@@ -39,7 +39,7 @@ export function AboutSection() {
               <p>
                 I remember standing on a little stool, watching my grandmother 
                 transform simple ingredients into magical creations. Those memories 
-                inspired me to start Sweet Delights, where every cake, pie, and 
+                inspired me to start Mahoney Makes, where every cake, pie, and 
                 pastry is made with the same love and care.
               </p>
               <p>

@@ -8,7 +8,7 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <h3 className="font-display text-2xl font-semibold">
-              Sweet <span className="text-primary">Delights</span>
+              Mahoney <span className="text-primary">Makes</span>
             </h3>
             <p className="text-muted-foreground leading-relaxed">
               Handcrafted with love, baked with passion. Every cake tells a story,
@@ -73,7 +73,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-border text-center">
           <p className="text-muted-foreground flex items-center justify-center gap-2">
-            Made with <Heart size={16} className="text-primary fill-primary" /> by Sweet Delights
+            Made with <Heart size={16} className="text-primary fill-primary" /> by Mahoney Makes
             <span className="mx-2">•</span>
             © {new Date().getFullYear()} All rights reserved
           </p>
