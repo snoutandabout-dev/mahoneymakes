@@ -48,7 +48,7 @@ export function Header() {
       <div className="container flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-display text-2xl md:text-3xl font-semibold text-foreground">
-            Sweet <span className="text-primary">Delights</span>
+            Mahoney <span className="text-primary">Makes</span>
           </span>
         </Link>
 
