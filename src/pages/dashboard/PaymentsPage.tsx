@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -74,6 +75,7 @@ const PaymentsPage = () => {
     payment_method: "cash",
     notes: "",
     payment_date: format(new Date(), "yyyy-MM-dd"),
+    sendReceipt: true,
   });
 
   useEffect(() => {
@@ -119,9 +121,9 @@ const PaymentsPage = () => {
     } else {
       toast.success("Payment recorded successfully");
       
-      // Send payment receipt email
+      // Send payment receipt email if enabled
       const order = orders.find(o => o.id === formData.order_id);
-      if (order) {
+      if (order && formData.sendReceipt) {
         // Calculate total paid for this order
         const { data: orderPayments } = await supabase
           .from("payments")
@@ -171,6 +173,7 @@ const PaymentsPage = () => {
         payment_method: "cash",
         notes: "",
         payment_date: format(new Date(), "yyyy-MM-dd"),
+        sendReceipt: true,
       });
     }
   };
@@ -294,6 +297,16 @@ const PaymentsPage = () => {
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Optional notes"
                   />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="sendReceipt"
+                    checked={formData.sendReceipt}
+                    onCheckedChange={(checked) => setFormData({ ...formData, sendReceipt: checked === true })}
+                  />
+                  <Label htmlFor="sendReceipt" className="text-sm font-normal cursor-pointer">
+                    Send email receipt to customer
+                  </Label>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
