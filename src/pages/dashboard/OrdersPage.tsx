@@ -21,11 +21,21 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Calendar, Search, Eye, ImageIcon } from "lucide-react";
+import { Plus, Calendar, Search, Eye, ImageIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Dialog as ImageDialog, DialogContent as ImageDialogContent } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface VisionImage {
   id: string;
@@ -75,6 +85,8 @@ const OrdersPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [visionImages, setVisionImages] = useState<VisionImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_name: "",
@@ -200,6 +212,32 @@ const OrdersPage = () => {
       total_amount: "",
       status: "pending",
     });
+  };
+
+  const handleDelete = async () => {
+    if (!orderToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // Delete related records first (vision images, supplies, payments)
+      await supabase.from("order_vision_images").delete().eq("order_id", orderToDelete.id);
+      await supabase.from("order_supplies").delete().eq("order_id", orderToDelete.id);
+      await supabase.from("payments").delete().eq("order_id", orderToDelete.id);
+      
+      // Delete the order
+      const { error } = await supabase.from("orders").delete().eq("id", orderToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success("Order deleted successfully");
+      fetchOrders();
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Failed to delete order");
+    } finally {
+      setIsDeleting(false);
+      setOrderToDelete(null);
+    }
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -458,9 +496,22 @@ const OrdersPage = () => {
                           </p>
                         )}
                       </div>
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrderToDelete(order);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -481,6 +532,29 @@ const OrdersPage = () => {
             )}
           </ImageDialogContent>
         </ImageDialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Order</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the order for <strong>{orderToDelete?.customer_name}</strong>? 
+                This will also delete all associated payments and images. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? "Deleting..." : "Delete Order"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
