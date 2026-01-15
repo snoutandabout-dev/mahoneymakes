@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, Mail, Save, Loader2 } from "lucide-react";
+import { EmailTemplatePreview } from "@/components/dashboard/EmailTemplatePreview";
 
 export default function SettingsPage() {
   const [notificationEmail, setNotificationEmail] = useState("");
@@ -151,6 +152,8 @@ export default function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <EmailTemplatePreview />
       </div>
     </DashboardLayout>
   );
