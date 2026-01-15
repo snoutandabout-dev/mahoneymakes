@@ -166,6 +166,44 @@ serve(async (req) => {
       );
     }
 
+    // Send email notifications asynchronously
+    try {
+      const notificationPayload = {
+        orderId: requestData.id,
+        customerName: body.customer_name,
+        customerEmail: body.customer_email || "",
+        customerPhone: body.customer_phone,
+        cakeType: body.cake_type,
+        eventType: body.event_type || "",
+        eventDate: body.event_date,
+        servings: body.servings,
+        budget: body.budget || "",
+        requestDetails: body.request_details || "",
+      };
+
+      // Call the notification edge function
+      const notificationResponse = await fetch(
+        `${supabaseUrl}/functions/v1/send-order-notification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(notificationPayload),
+        }
+      );
+
+      if (!notificationResponse.ok) {
+        console.error("Notification send failed:", await notificationResponse.text());
+      } else {
+        console.log("Notifications sent successfully");
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notifications fail
+      console.error("Notification error:", notificationError);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
