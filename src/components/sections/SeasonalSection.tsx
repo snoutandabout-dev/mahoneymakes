@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Leaf } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import seasonalCakeImage from "@/assets/seasonal-mint-chocolate-cake.jpg";
+import defaultSeasonalImage from "@/assets/seasonal-mint-chocolate-cake.jpg";
 
 interface SeasonalSpecial {
   id: string;
@@ -12,6 +12,7 @@ interface SeasonalSpecial {
   season: string;
   price: number | null;
   is_active: boolean | null;
+  image_url: string | null;
 }
 
 export function SeasonalSection() {
@@ -108,7 +109,7 @@ export function SeasonalSection() {
               {/* Visual Side */}
               <div className="relative h-64 lg:h-auto overflow-hidden">
                 <img 
-                  src={seasonalCakeImage} 
+                  src={activeSpecial.image_url || defaultSeasonalImage} 
                   alt={`${activeSpecial.name} - Our seasonal special`}
                   className="w-full h-full object-cover"
                 />
