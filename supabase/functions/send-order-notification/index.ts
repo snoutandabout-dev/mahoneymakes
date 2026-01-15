@@ -17,6 +17,7 @@ interface NotificationRequest {
   servings: number | null;
   budget: string;
   requestDetails: string;
+  notificationType?: "new_request" | "order_confirmed";
 }
 
 async function sendEmail(
@@ -90,8 +91,39 @@ serve(async (req) => {
       day: "numeric",
     });
 
+    const isOrderConfirmation = body.notificationType === "order_confirmed";
+
     // Send notification to baker
-    const bakerEmailHtml = `
+    const bakerEmailHtml = isOrderConfirmation
+      ? `
+      <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
+          ✅ Request Converted to Order!
+        </h1>
+        
+        <p style="color: #5D4037;">A customer request has been converted to an official order.</p>
+        
+        <div style="background: #FFF8F0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="color: #5D4037; margin-top: 0;">Customer Details</h2>
+          <p><strong>Name:</strong> ${body.customerName}</p>
+          <p><strong>Email:</strong> ${body.customerEmail || "Not provided"}</p>
+          <p><strong>Phone:</strong> ${body.customerPhone}</p>
+        </div>
+        
+        <div style="background: #FFF8F0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h2 style="color: #5D4037; margin-top: 0;">Order Details</h2>
+          <p><strong>Cake Type:</strong> ${body.cakeType}</p>
+          <p><strong>Event Type:</strong> ${body.eventType || "Not specified"}</p>
+          <p><strong>Event Date:</strong> ${eventDateFormatted}</p>
+          <p><strong>Servings:</strong> ${body.servings || "Not specified"}</p>
+        </div>
+        
+        <p style="color: #888; font-size: 12px; margin-top: 30px;">
+          Order ID: ${body.orderId}
+        </p>
+      </div>
+    `
+      : `
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
           🎂 New Order Request!
@@ -127,7 +159,9 @@ serve(async (req) => {
     const bakerResult = await sendEmail(
       resendApiKey,
       bakerEmail,
-      `New Order Request from ${body.customerName}`,
+      isOrderConfirmation 
+        ? `Order Confirmed: ${body.customerName} - ${body.cakeType}`
+        : `New Order Request from ${body.customerName}`,
       bakerEmailHtml
     );
 
@@ -138,7 +172,39 @@ serve(async (req) => {
     // Send confirmation to customer if email provided
     let customerResult: { success: boolean; error?: string } = { success: true };
     if (body.customerEmail) {
-      const customerEmailHtml = `
+      const customerEmailHtml = isOrderConfirmation
+        ? `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
+            🎉 Your Order is Confirmed!
+          </h1>
+          
+          <p>Dear ${body.customerName},</p>
+          
+          <p>Great news! Your custom cake order has been confirmed and we're excited to start working on it!</p>
+          
+          <div style="background: #FFF8F0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h2 style="color: #5D4037; margin-top: 0;">Order Details</h2>
+            <p><strong>Cake Type:</strong> ${body.cakeType}</p>
+            <p><strong>Event Type:</strong> ${body.eventType || "Not specified"}</p>
+            <p><strong>Event Date:</strong> ${eventDateFormatted}</p>
+            <p><strong>Servings:</strong> ${body.servings || "Not specified"}</p>
+          </div>
+          
+          <p><strong>What happens next?</strong></p>
+          <p>I'll be in touch soon to discuss any final details. If you have questions, don't hesitate to reach out!</p>
+          
+          <p style="margin-top: 30px;">
+            With love and butter,<br>
+            <strong>Mahoney Makes</strong>
+          </p>
+          
+          <p style="color: #888; font-size: 12px; margin-top: 30px;">
+            Order Reference: ${body.orderId}
+          </p>
+        </div>
+      `
+        : `
         <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
             Thank You for Your Order Request!
@@ -176,7 +242,9 @@ serve(async (req) => {
       customerResult = await sendEmail(
         resendApiKey,
         body.customerEmail,
-        "We Received Your Cake Order Request! 🎂",
+        isOrderConfirmation 
+          ? "Your Cake Order is Confirmed! 🎉"
+          : "We Received Your Cake Order Request! 🎂",
         customerEmailHtml
       );
 

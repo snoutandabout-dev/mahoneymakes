@@ -177,9 +177,31 @@ export default function RequestsPage() {
       .update({ status: "confirmed" })
       .eq("id", request.id);
 
+    // Send order confirmation email
+    try {
+      await supabase.functions.invoke("send-order-notification", {
+        body: {
+          orderId: orderData.id,
+          customerName: request.customer_name,
+          customerEmail: request.customer_email,
+          customerPhone: request.customer_phone,
+          cakeType: request.cake_type,
+          eventType: request.event_type,
+          eventDate: request.event_date,
+          servings: request.servings,
+          budget: request.budget,
+          requestDetails: request.request_details,
+          notificationType: "order_confirmed",
+        },
+      });
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the conversion if email fails
+    }
+
     setConverting(false);
     setDetailDialogOpen(false);
-    toast.success("Request converted to order successfully!");
+    toast.success("Request converted to order and confirmation sent!");
     fetchRequests();
   };
 
