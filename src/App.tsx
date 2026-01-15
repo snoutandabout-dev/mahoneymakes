@@ -17,6 +17,7 @@ import SpecialsPage from "./pages/dashboard/SpecialsPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import UsersPage from "./pages/dashboard/UsersPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import CostCalculatorPage from "./pages/dashboard/CostCalculatorPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/dashboard/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/dashboard/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/dashboard/costs" element={<ProtectedRoute><CostCalculatorPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
