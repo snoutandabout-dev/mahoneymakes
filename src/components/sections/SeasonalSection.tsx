@@ -1,9 +1,22 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Leaf } from "lucide-react";
+import { Sparkles, Leaf, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import defaultSeasonalImage from "@/assets/seasonal-mint-chocolate-cake.jpg";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+
+interface SpecialImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
 
 interface SeasonalSpecial {
   id: string;
@@ -13,6 +26,7 @@ interface SeasonalSpecial {
   price: number | null;
   is_active: boolean | null;
   image_url: string | null;
+  images?: SpecialImage[];
 }
 
 export function SeasonalSection() {
@@ -32,7 +46,14 @@ export function SeasonalSection() {
       .maybeSingle();
 
     if (!error && data) {
-      setActiveSpecial(data);
+      // Fetch images for the special
+      const { data: images } = await supabase
+        .from("seasonal_special_images")
+        .select("*")
+        .eq("special_id", data.id)
+        .order("display_order", { ascending: true });
+      
+      setActiveSpecial({ ...data, images: images || [] });
     }
     setLoading(false);
   };
@@ -53,6 +74,21 @@ export function SeasonalSection() {
     return seasonLabels[season] || "Seasonal Special";
   };
 
+  // Get all images to display (from images table, fallback to image_url, then default)
+  const getDisplayImages = (): string[] => {
+    if (!activeSpecial) return [defaultSeasonalImage];
+    
+    if (activeSpecial.images && activeSpecial.images.length > 0) {
+      return activeSpecial.images.map((img) => img.image_url);
+    }
+    
+    if (activeSpecial.image_url) {
+      return [activeSpecial.image_url];
+    }
+    
+    return [defaultSeasonalImage];
+  };
+
   // Don't render if loading or no active special
   if (loading) {
     return null;
@@ -61,6 +97,9 @@ export function SeasonalSection() {
   if (!activeSpecial) {
     return null;
   }
+
+  const displayImages = getDisplayImages();
+  const hasMultipleImages = displayImages.length > 1;
 
   return (
     <section className="py-16 bg-gradient-to-b from-secondary/30 to-background">
@@ -106,15 +145,35 @@ export function SeasonalSection() {
                 </div>
               </div>
               
-              {/* Visual Side */}
+              {/* Visual Side - Carousel if multiple images */}
               <div className="relative h-64 lg:h-auto overflow-hidden">
-                <img 
-                  src={activeSpecial.image_url || defaultSeasonalImage} 
-                  alt={`${activeSpecial.name} - Our seasonal special`}
-                  className="w-full h-full object-cover"
-                />
+                {hasMultipleImages ? (
+                  <Carousel className="w-full h-full">
+                    <CarouselContent className="h-full">
+                      {displayImages.map((imageUrl, index) => (
+                        <CarouselItem key={index} className="h-full">
+                          <div className="relative h-64 lg:h-full w-full">
+                            <img 
+                              src={imageUrl} 
+                              alt={`${activeSpecial.name} - Image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-2 bg-background/80 hover:bg-background" />
+                    <CarouselNext className="right-2 bg-background/80 hover:bg-background" />
+                  </Carousel>
+                ) : (
+                  <img 
+                    src={displayImages[0]} 
+                    alt={`${activeSpecial.name} - Our seasonal special`}
+                    className="w-full h-full object-cover"
+                  />
+                )}
                 {/* Overlay for subtle gradient effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent pointer-events-none" />
               </div>
             </div>
           </CardContent>

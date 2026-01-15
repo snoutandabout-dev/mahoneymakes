@@ -428,6 +428,38 @@ export type Database = {
         }
         Relationships: []
       }
+      seasonal_special_images: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          special_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          special_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          special_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasonal_special_images_special_id_fkey"
+            columns: ["special_id"]
+            isOneToOne: false
+            referencedRelation: "seasonal_specials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasonal_specials: {
         Row: {
           created_at: string
