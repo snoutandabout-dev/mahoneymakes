@@ -18,9 +18,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Mail, Phone, Calendar, Cake, Users, DollarSign, MessageSquare, Image, Check, X, Clock, Trash2 } from "lucide-react";
+import { Search, Mail, Phone, Calendar, Cake, Users, DollarSign, MessageSquare, Image, Check, X, Clock, Trash2, ArrowRight } from "lucide-react";
 
 interface RequestImage {
   id: string;
@@ -43,6 +44,7 @@ interface OrderRequest {
 }
 
 export default function RequestsPage() {
+  const { user } = useAuth();
   const [requests, setRequests] = useState<OrderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +53,7 @@ export default function RequestsPage() {
   const [requestImages, setRequestImages] = useState<RequestImage[]>([]);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -119,6 +122,65 @@ export default function RequestsPage() {
       setDetailDialogOpen(false);
       fetchRequests();
     }
+  };
+
+  const convertToOrder = async (request: OrderRequest) => {
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
+
+    setConverting(true);
+
+    // Create order from request data
+    const { data: orderData, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: user.id,
+        customer_name: request.customer_name,
+        customer_email: request.customer_email,
+        customer_phone: request.customer_phone,
+        cake_type: request.cake_type,
+        event_type: request.event_type,
+        event_date: request.event_date,
+        servings: request.servings,
+        order_notes: request.request_details,
+        status: "pending",
+        deposit_amount: 0,
+        total_amount: 0,
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      toast.error("Failed to create order");
+      console.error(orderError);
+      setConverting(false);
+      return;
+    }
+
+    // Copy inspiration images to order vision images
+    if (requestImages.length > 0 && orderData) {
+      const visionImages = requestImages.map((img) => ({
+        order_id: orderData.id,
+        image_url: img.image_url,
+        caption: null,
+        user_id: user.id,
+      }));
+
+      await supabase.from("order_vision_images").insert(visionImages);
+    }
+
+    // Update request status to converted (we'll use "confirmed" since it's already handled)
+    await supabase
+      .from("order_requests")
+      .update({ status: "confirmed" })
+      .eq("id", request.id);
+
+    setConverting(false);
+    setDetailDialogOpen(false);
+    toast.success("Request converted to order successfully!");
+    fetchRequests();
   };
 
   const getStatusColor = (status: string) => {
@@ -372,8 +434,18 @@ export default function RequestsPage() {
                   </div>
                 )}
 
-                {/* Delete */}
-                <div className="pt-4 border-t">
+                {/* Actions */}
+                <div className="pt-4 border-t flex flex-wrap gap-3">
+                  {selectedRequest.status === "confirmed" && (
+                    <Button
+                      variant="hero"
+                      onClick={() => convertToOrder(selectedRequest)}
+                      disabled={converting}
+                    >
+                      <ArrowRight className="w-4 h-4 mr-1" />
+                      {converting ? "Converting..." : "Convert to Order"}
+                    </Button>
+                  )}
                   <Button
                     variant="destructive"
                     size="sm"

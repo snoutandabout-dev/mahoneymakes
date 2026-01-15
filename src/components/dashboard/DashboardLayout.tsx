@@ -18,6 +18,7 @@ import {
   Home,
   Users,
   Settings,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ const sidebarItems = [
   { icon: Inbox, label: "Requests", href: "/dashboard/requests" },
   { icon: ClipboardList, label: "Orders", href: "/dashboard/orders" },
   { icon: DollarSign, label: "Payments", href: "/dashboard/payments" },
+  { icon: Calculator, label: "Cost Calculator", href: "/dashboard/costs" },
   { icon: Package, label: "Supplies", href: "/dashboard/supplies" },
   { icon: ClipboardCheck, label: "Inventory", href: "/dashboard/inventory" },
   { icon: Sparkles, label: "Specials", href: "/dashboard/specials" },
