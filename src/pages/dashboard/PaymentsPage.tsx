@@ -38,8 +38,11 @@ interface Payment {
 interface Order {
   id: string;
   customer_name: string;
+  customer_email: string | null;
+  customer_phone: string;
   cake_type: string;
-  total_amount: number;
+  event_date: string;
+  total_amount: number | null;
 }
 
 const paymentMethods = [
@@ -93,7 +96,7 @@ const PaymentsPage = () => {
   const fetchOrders = async () => {
     const { data } = await supabase
       .from("orders")
-      .select("id, customer_name, cake_type, total_amount")
+      .select("id, customer_name, customer_email, customer_phone, cake_type, event_date, total_amount")
       .order("created_at", { ascending: false });
     setOrders(data || []);
   };
@@ -101,7 +104,7 @@ const PaymentsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.from("payments").insert({
+    const { data: paymentData, error } = await supabase.from("payments").insert({
       user_id: user!.id,
       order_id: formData.order_id,
       amount: parseFloat(formData.amount),
@@ -109,12 +112,56 @@ const PaymentsPage = () => {
       payment_method: formData.payment_method,
       notes: formData.notes || null,
       payment_date: formData.payment_date,
-    });
+    }).select().single();
 
     if (error) {
       toast.error("Failed to record payment");
     } else {
       toast.success("Payment recorded successfully");
+      
+      // Send payment receipt email
+      const order = orders.find(o => o.id === formData.order_id);
+      if (order) {
+        // Calculate total paid for this order
+        const { data: orderPayments } = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("order_id", order.id);
+        
+        const totalPaid = (orderPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+        const remainingBalance = (order.total_amount || 0) - totalPaid;
+
+        try {
+          const response = await supabase.functions.invoke("send-order-notification", {
+            body: {
+              orderId: order.id,
+              customerName: order.customer_name,
+              customerEmail: order.customer_email,
+              customerPhone: order.customer_phone,
+              cakeType: order.cake_type,
+              eventType: "",
+              eventDate: order.event_date,
+              servings: null,
+              budget: "",
+              requestDetails: "",
+              notificationType: "payment_receipt",
+              paymentAmount: parseFloat(formData.amount),
+              paymentType: formData.payment_type,
+              paymentMethod: paymentMethods.find(m => m.value === formData.payment_method)?.label || formData.payment_method,
+              paymentDate: formData.payment_date,
+              totalPaid,
+              remainingBalance: remainingBalance > 0 ? remainingBalance : 0,
+            },
+          });
+          
+          if (response.error) {
+            console.error("Failed to send payment receipt:", response.error);
+          }
+        } catch (err) {
+          console.error("Error sending payment receipt:", err);
+        }
+      }
+      
       fetchPayments();
       setIsDialogOpen(false);
       setFormData({

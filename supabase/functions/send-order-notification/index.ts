@@ -17,7 +17,14 @@ interface NotificationRequest {
   servings: number | null;
   budget: string;
   requestDetails: string;
-  notificationType?: "new_request" | "order_confirmed";
+  notificationType?: "new_request" | "order_confirmed" | "payment_receipt";
+  // Payment-specific fields
+  paymentAmount?: number;
+  paymentType?: string;
+  paymentMethod?: string;
+  paymentDate?: string;
+  totalPaid?: number;
+  remainingBalance?: number;
 }
 
 async function sendEmail(
@@ -92,6 +99,130 @@ serve(async (req) => {
     });
 
     const isOrderConfirmation = body.notificationType === "order_confirmed";
+    const isPaymentReceipt = body.notificationType === "payment_receipt";
+
+    // Payment receipt email templates
+    if (isPaymentReceipt) {
+      const paymentTypeLabel = body.paymentType === "deposit" ? "Deposit" : 
+                               body.paymentType === "final_payment" ? "Final Payment" : "Payment";
+      
+      const paymentDateFormatted = body.paymentDate 
+        ? new Date(body.paymentDate).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : "Today";
+
+      // Send receipt to baker
+      const bakerReceiptHtml = `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
+            💰 ${paymentTypeLabel} Received
+          </h1>
+          
+          <div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="color: #2E7D32; font-size: 32px; font-weight: bold; margin: 0;">
+              $${body.paymentAmount?.toFixed(2)}
+            </p>
+            <p style="color: #4CAF50; margin: 5px 0 0 0;">via ${body.paymentMethod}</p>
+          </div>
+          
+          <div style="background: #FFF8F0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h2 style="color: #5D4037; margin-top: 0;">Order Details</h2>
+            <p><strong>Customer:</strong> ${body.customerName}</p>
+            <p><strong>Cake:</strong> ${body.cakeType}</p>
+            <p><strong>Event Date:</strong> ${eventDateFormatted}</p>
+          </div>
+          
+          <div style="background: #F5F5F5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Total Paid:</strong> $${body.totalPaid?.toFixed(2) || "0.00"}</p>
+            ${body.remainingBalance !== undefined && body.remainingBalance > 0 
+              ? `<p style="margin: 5px 0 0 0; color: #F57C00;"><strong>Remaining Balance:</strong> $${body.remainingBalance.toFixed(2)}</p>`
+              : `<p style="margin: 5px 0 0 0; color: #4CAF50;"><strong>✅ Paid in Full</strong></p>`
+            }
+          </div>
+          
+          <p style="color: #888; font-size: 12px; margin-top: 30px;">
+            Order ID: ${body.orderId}
+          </p>
+        </div>
+      `;
+
+      const bakerResult = await sendEmail(
+        resendApiKey,
+        bakerEmail,
+        `${paymentTypeLabel} Received: ${body.customerName} - $${body.paymentAmount?.toFixed(2)}`,
+        bakerReceiptHtml
+      );
+
+      // Send receipt to customer
+      let customerResult: { success: boolean; error?: string } = { success: true };
+      if (body.customerEmail) {
+        const customerReceiptHtml = `
+          <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #8B4513; border-bottom: 2px solid #D4A574; padding-bottom: 10px;">
+              🧾 Payment Receipt
+            </h1>
+            
+            <p>Dear ${body.customerName},</p>
+            
+            <p>Thank you for your payment! Here's your receipt for your records.</p>
+            
+            <div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <p style="color: #666; margin: 0 0 5px 0;">${paymentTypeLabel}</p>
+              <p style="color: #2E7D32; font-size: 32px; font-weight: bold; margin: 0;">
+                $${body.paymentAmount?.toFixed(2)}
+              </p>
+              <p style="color: #888; margin: 5px 0 0 0;">${paymentDateFormatted}</p>
+            </div>
+            
+            <div style="background: #FFF8F0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h2 style="color: #5D4037; margin-top: 0;">Order Summary</h2>
+              <p><strong>Cake Type:</strong> ${body.cakeType}</p>
+              <p><strong>Event Date:</strong> ${eventDateFormatted}</p>
+              <p><strong>Payment Method:</strong> ${body.paymentMethod}</p>
+            </div>
+            
+            <div style="background: #F5F5F5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Total Paid to Date:</strong> $${body.totalPaid?.toFixed(2) || "0.00"}</p>
+              ${body.remainingBalance !== undefined && body.remainingBalance > 0 
+                ? `<p style="margin: 5px 0 0 0; color: #F57C00;"><strong>Remaining Balance:</strong> $${body.remainingBalance.toFixed(2)}</p>`
+                : `<p style="margin: 5px 0 0 0; color: #4CAF50;"><strong>✅ Paid in Full - Thank you!</strong></p>`
+              }
+            </div>
+            
+            <p>If you have any questions about your order, please don't hesitate to reach out!</p>
+            
+            <p style="margin-top: 30px;">
+              With love and butter,<br>
+              <strong>Mahoney Makes</strong>
+            </p>
+            
+            <p style="color: #888; font-size: 12px; margin-top: 30px;">
+              Order Reference: ${body.orderId}
+            </p>
+          </div>
+        `;
+
+        customerResult = await sendEmail(
+          resendApiKey,
+          body.customerEmail,
+          `Payment Receipt - $${body.paymentAmount?.toFixed(2)} 🧾`,
+          customerReceiptHtml
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          bakerNotified: bakerResult.success,
+          customerNotified: customerResult.success,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Send notification to baker
     const bakerEmailHtml = isOrderConfirmation
