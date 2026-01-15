@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Pencil, Trash2, Sparkles, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles, TrendingUp, ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,6 +34,7 @@ interface SeasonalSpecial {
   price: number | null;
   is_active: boolean;
   order_count: number;
+  image_url: string | null;
 }
 
 const seasons = [
@@ -51,12 +52,17 @@ const SpecialsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSpecial, setEditingSpecial] = useState<SeasonalSpecial | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     season: "spring",
     price: "",
     is_active: true,
+    image_url: "",
   });
 
   useEffect(() => {
@@ -73,19 +79,78 @@ const SpecialsPage = () => {
     setLoading(false);
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (specialId: string): Promise<string | null> => {
+    if (!imageFile) return formData.image_url || null;
+
+    setUploadingImage(true);
+    const fileExt = imageFile.name.split(".").pop();
+    const fileName = `${specialId}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("seasonal-specials")
+      .upload(fileName, imageFile);
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      setUploadingImage(false);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("seasonal-specials")
+      .getPublicUrl(fileName);
+
+    setUploadingImage(false);
+    return urlData.publicUrl;
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData({ ...formData, image_url: "" });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const specialData = {
-      user_id: user!.id,
-      name: formData.name,
-      description: formData.description || null,
-      season: formData.season,
-      price: formData.price ? parseFloat(formData.price) : null,
-      is_active: formData.is_active,
-    };
+    let imageUrl = formData.image_url || null;
 
     if (editingSpecial) {
+      // Upload new image if selected
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(editingSpecial.id);
+        if (uploadedUrl) imageUrl = uploadedUrl;
+      }
+
+      const specialData = {
+        user_id: user!.id,
+        name: formData.name,
+        description: formData.description || null,
+        season: formData.season,
+        price: formData.price ? parseFloat(formData.price) : null,
+        is_active: formData.is_active,
+        image_url: imageUrl,
+      };
+
       const { error } = await supabase
         .from("seasonal_specials")
         .update(specialData)
@@ -99,11 +164,35 @@ const SpecialsPage = () => {
         fetchSpecials();
       }
     } else {
-      const { error } = await supabase.from("seasonal_specials").insert(specialData);
+      // Create the special first to get an ID
+      const specialData = {
+        user_id: user!.id,
+        name: formData.name,
+        description: formData.description || null,
+        season: formData.season,
+        price: formData.price ? parseFloat(formData.price) : null,
+        is_active: formData.is_active,
+      };
+
+      const { data: newSpecial, error } = await supabase
+        .from("seasonal_specials")
+        .insert(specialData)
+        .select()
+        .single();
 
       if (error) {
         toast.error("Failed to create special");
-      } else {
+      } else if (newSpecial) {
+        // Upload image if selected
+        if (imageFile) {
+          const uploadedUrl = await uploadImage(newSpecial.id);
+          if (uploadedUrl) {
+            await supabase
+              .from("seasonal_specials")
+              .update({ image_url: uploadedUrl })
+              .eq("id", newSpecial.id);
+          }
+        }
         toast.success("Special created successfully");
         closeDialog();
         fetchSpecials();
@@ -119,7 +208,10 @@ const SpecialsPage = () => {
       season: special.season,
       price: special.price?.toString() || "",
       is_active: special.is_active,
+      image_url: special.image_url || "",
     });
+    setImagePreview(special.image_url || null);
+    setImageFile(null);
     setIsDialogOpen(true);
   };
 
@@ -167,13 +259,19 @@ const SpecialsPage = () => {
   const closeDialog = () => {
     setIsDialogOpen(false);
     setEditingSpecial(null);
+    setImageFile(null);
+    setImagePreview(null);
     setFormData({
       name: "",
       description: "",
       season: "spring",
       price: "",
       is_active: true,
+      image_url: "",
     });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const getSeasonColor = (season: string) => {
@@ -254,6 +352,45 @@ const SpecialsPage = () => {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Photo</Label>
+                  <div className="space-y-3">
+                    {imagePreview ? (
+                      <div className="relative w-full h-40 rounded-lg overflow-hidden border">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8"
+                          onClick={removeImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        className="w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">Click to upload image</p>
+                        <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
                 <div className="flex items-center gap-3">
                   <Switch
                     checked={formData.is_active}
@@ -265,9 +402,9 @@ const SpecialsPage = () => {
                   <Button type="button" variant="outline" onClick={closeDialog}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="hero">
-                    {editingSpecial ? "Update Special" : "Create Special"}
-                  </Button>
+                <Button type="submit" variant="hero" disabled={uploadingImage}>
+                  {uploadingImage ? "Uploading..." : editingSpecial ? "Update Special" : "Create Special"}
+                </Button>
                 </div>
               </form>
             </DialogContent>
@@ -290,37 +427,47 @@ const SpecialsPage = () => {
                 key={special.id}
                 className={!special.is_active ? "opacity-60" : ""}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg">{special.name}</h3>
-                        <Badge className={getSeasonColor(special.season)}>
-                          {seasons.find((s) => s.value === special.season)?.label}
-                        </Badge>
-                      </div>
-                      {special.description && (
-                        <p className="text-sm text-muted-foreground mb-3">{special.description}</p>
-                      )}
-                      <div className="flex items-center gap-4">
-                        {special.price && (
-                          <span className="font-semibold text-primary">
-                            ${Number(special.price).toFixed(2)}
-                          </span>
-                        )}
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <TrendingUp className="h-4 w-4" />
-                          {special.order_count} orders
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Switch
-                        checked={special.is_active}
-                        onCheckedChange={(checked) => toggleActive(special.id, checked)}
+                <CardContent className="p-0">
+                  {special.image_url && (
+                    <div className="h-40 overflow-hidden rounded-t-lg">
+                      <img
+                        src={special.image_url}
+                        alt={special.name}
+                        className="w-full h-full object-cover"
                       />
                     </div>
-                  </div>
+                  )}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{special.name}</h3>
+                          <Badge className={getSeasonColor(special.season)}>
+                            {seasons.find((s) => s.value === special.season)?.label}
+                          </Badge>
+                        </div>
+                        {special.description && (
+                          <p className="text-sm text-muted-foreground mb-3">{special.description}</p>
+                        )}
+                        <div className="flex items-center gap-4">
+                          {special.price && (
+                            <span className="font-semibold text-primary">
+                              ${Number(special.price).toFixed(2)}
+                            </span>
+                          )}
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <TrendingUp className="h-4 w-4" />
+                            {special.order_count} orders
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Switch
+                          checked={special.is_active}
+                          onCheckedChange={(checked) => toggleActive(special.id, checked)}
+                        />
+                      </div>
+                    </div>
                   <div className="flex justify-between items-center mt-4 pt-4 border-t">
                     <Button
                       variant="outline"
@@ -342,6 +489,7 @@ const SpecialsPage = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
                   </div>
                 </CardContent>
               </Card>
