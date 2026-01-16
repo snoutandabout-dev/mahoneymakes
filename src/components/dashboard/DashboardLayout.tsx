@@ -13,27 +13,65 @@ import {
   BarChart3,
   LogOut,
   Menu,
-  X,
-  ChevronLeft,
+  ChevronDown,
+  ChevronRight,
   Home,
   Users,
   Settings,
   Calculator,
+  ShoppingCart,
+  Warehouse,
+  PieChart,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import logo from "@/assets/mahoney-makes-logo.png";
 
-const sidebarItems = [
+interface NavItem {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+}
+
+interface NavGroup {
+  icon: React.ElementType;
+  label: string;
+  items: NavItem[];
+}
+
+type SidebarItem = NavItem | NavGroup;
+
+const isNavGroup = (item: SidebarItem): item is NavGroup => {
+  return "items" in item;
+};
+
+const sidebarItems: SidebarItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: Inbox, label: "Requests", href: "/dashboard/requests" },
-  { icon: ClipboardList, label: "Orders", href: "/dashboard/orders" },
-  { icon: DollarSign, label: "Payments", href: "/dashboard/payments" },
-  { icon: Calculator, label: "Cost Calculator", href: "/dashboard/costs" },
-  { icon: Package, label: "Supplies", href: "/dashboard/supplies" },
-  { icon: ClipboardCheck, label: "Inventory", href: "/dashboard/inventory" },
+  {
+    icon: ShoppingCart,
+    label: "Orders",
+    items: [
+      { icon: Inbox, label: "Requests", href: "/dashboard/requests" },
+      { icon: ClipboardList, label: "Orders", href: "/dashboard/orders" },
+      { icon: DollarSign, label: "Payments", href: "/dashboard/payments" },
+    ],
+  },
+  {
+    icon: Warehouse,
+    label: "Inventory",
+    items: [
+      { icon: Package, label: "Supplies", href: "/dashboard/supplies" },
+      { icon: ClipboardCheck, label: "Checklist", href: "/dashboard/inventory" },
+    ],
+  },
   { icon: Sparkles, label: "Specials", href: "/dashboard/specials" },
-  { icon: BarChart3, label: "Reports", href: "/dashboard/reports" },
+  {
+    icon: PieChart,
+    label: "Financials",
+    items: [
+      { icon: Calculator, label: "Cost Calculator", href: "/dashboard/costs" },
+      { icon: BarChart3, label: "Reports", href: "/dashboard/reports" },
+    ],
+  },
   { icon: Users, label: "Team", href: "/dashboard/users" },
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
@@ -44,14 +82,51 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+
+  // Auto-expand groups that contain the current route
+  const getInitialExpandedGroups = () => {
+    const expanded: string[] = [];
+    sidebarItems.forEach((item) => {
+      if (isNavGroup(item)) {
+        const hasActiveChild = item.items.some(
+          (child) => location.pathname === child.href
+        );
+        if (hasActiveChild && !expanded.includes(item.label)) {
+          expanded.push(item.label);
+        }
+      }
+    });
+    return expanded;
+  };
+
+  // Initialize expanded groups based on current route
+  useState(() => {
+    const initial = getInitialExpandedGroups();
+    if (initial.length > 0) {
+      setExpandedGroups(initial);
+    }
+  });
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups((prev) =>
+      prev.includes(label)
+        ? prev.filter((g) => g !== label)
+        : [...prev, label]
+    );
+  };
 
   const handleSignOut = async () => {
     await signOut();
     toast.success("Signed out successfully");
     navigate("/");
+  };
+
+  const isGroupActive = (group: NavGroup) => {
+    return group.items.some((item) => location.pathname === item.href);
   };
 
   return (
@@ -81,8 +156,60 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {sidebarItems.map((item) => {
+              if (isNavGroup(item)) {
+                const isExpanded = expandedGroups.includes(item.label);
+                const isActive = isGroupActive(item);
+
+                return (
+                  <div key={item.label}>
+                    <button
+                      onClick={() => toggleGroup(item.label)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors",
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-medium">{item.label}</span>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-4">
+                        {item.items.map((subItem) => {
+                          const isSubActive = location.pathname === subItem.href;
+                          return (
+                            <Link
+                              key={subItem.href}
+                              to={subItem.href}
+                              onClick={() => setIsSidebarOpen(false)}
+                              className={cn(
+                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                                isSubActive
+                                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+                              )}
+                            >
+                              <subItem.icon className="h-4 w-4" />
+                              <span>{subItem.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = location.pathname === item.href;
               return (
                 <Link
