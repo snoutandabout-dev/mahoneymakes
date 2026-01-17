@@ -110,8 +110,8 @@ const SpecialsPage = () => {
     const files = Array.from(e.target.files || []);
     
     files.forEach((file) => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} is too large. Images must be less than 5MB`);
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Images must be less than 10MB`);
         return;
       }
       
