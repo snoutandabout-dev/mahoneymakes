@@ -14,6 +14,7 @@ import PaymentsPage from "./pages/dashboard/PaymentsPage";
 import SuppliesPage from "./pages/dashboard/SuppliesPage";
 import InventoryPage from "./pages/dashboard/InventoryPage";
 import SpecialsPage from "./pages/dashboard/SpecialsPage";
+import MenuItemsPage from "./pages/dashboard/MenuItemsPage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import UsersPage from "./pages/dashboard/UsersPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard/supplies" element={<ProtectedRoute><SuppliesPage /></ProtectedRoute>} />
             <Route path="/dashboard/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
             <Route path="/dashboard/specials" element={<ProtectedRoute><SpecialsPage /></ProtectedRoute>} />
+            <Route path="/dashboard/menu" element={<ProtectedRoute><MenuItemsPage /></ProtectedRoute>} />
             <Route path="/dashboard/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/dashboard/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

@@ -1,49 +1,48 @@
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Cake, Cookie, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const menuCategories = {
-  flavors: {
-    title: "Cake Flavors",
-    icon: Cake,
-    items: [
-      { name: "Classic Vanilla", description: "Light and fluffy vanilla bean cake with buttercream", price: "Starting at $45" },
-      { name: "Rich Chocolate", description: "Decadent dark chocolate layers with ganache", price: "Starting at $48" },
-      { name: "Red Velvet", description: "Southern classic with cream cheese frosting", price: "Starting at $50" },
-      { name: "Lemon Blueberry", description: "Fresh lemon cake with blueberry compote", price: "Starting at $52" },
-      { name: "Carrot Cake", description: "Spiced carrot cake with walnuts and cream cheese", price: "Starting at $48" },
-      { name: "Strawberry Dream", description: "Fresh strawberry cake with strawberry buttercream", price: "Starting at $52" },
-      { name: "Cookies & Cream", description: "Oreo-studded cake with cookies & cream frosting", price: "Starting at $50" },
-      { name: "Salted Caramel", description: "Brown butter cake with salted caramel drizzle", price: "Starting at $55" },
-    ],
-  },
-  specialty: {
-    title: "Specialty Cakes",
-    icon: Sparkles,
-    items: [
-      { name: "Wedding Cakes", description: "Multi-tiered elegance for your special day", price: "Custom quote" },
-      { name: "Birthday Celebration", description: "Themed cakes for kids and adults alike", price: "Starting at $65" },
-      { name: "Graduation Cakes", description: "Celebrate achievements in style", price: "Starting at $55" },
-      { name: "Baby Shower", description: "Sweet designs for welcoming little ones", price: "Starting at $60" },
-      { name: "Anniversary", description: "Romantic designs for milestone celebrations", price: "Starting at $70" },
-      { name: "Holiday Specials", description: "Seasonal favorites throughout the year", price: "Varies" },
-    ],
-  },
-  treats: {
-    title: "Pies & Treats",
-    icon: Cookie,
-    items: [
-      { name: "Apple Pie", description: "Classic lattice-top with cinnamon apples", price: "$28" },
-      { name: "Pecan Pie", description: "Rich Southern-style pecan pie", price: "$32" },
-      { name: "Cupcakes (dozen)", description: "Your choice of flavors, beautifully decorated", price: "$36" },
-      { name: "Cake Pops (dozen)", description: "Bite-sized cake on a stick", price: "$24" },
-      { name: "Cheesecake", description: "Creamy NY-style with optional toppings", price: "$45" },
-      { name: "Assorted Cookies", description: "Fresh-baked cookies (2 dozen)", price: "$28" },
-    ],
-  },
+interface MenuItem {
+  id: string;
+  category: string;
+  name: string;
+  description: string | null;
+  price: string;
+  is_available: boolean;
+}
+
+const categoryConfig = {
+  flavors: { title: "Cake Flavors", icon: Cake },
+  specialty: { title: "Specialty Cakes", icon: Sparkles },
+  treats: { title: "Pies & Treats", icon: Cookie },
 };
 
 export function MenuSection() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      const { data, error } = await supabase
+        .from("menu_items")
+        .select("*")
+        .order("display_order", { ascending: true });
+
+      if (!error && data) {
+        setMenuItems(data);
+      }
+      setLoading(false);
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  const getItemsByCategory = (category: string) => {
+    return menuItems.filter((item) => item.category === category);
+  };
+
   return (
     <section id="menu" className="py-24">
       <div className="container">
@@ -62,7 +61,7 @@ export function MenuSection() {
 
         <Tabs defaultValue="flavors" className="w-full">
           <TabsList className="w-full max-w-lg mx-auto grid grid-cols-3 mb-12 h-auto p-1 bg-secondary">
-            {Object.entries(menuCategories).map(([key, category]) => (
+            {Object.entries(categoryConfig).map(([key, category]) => (
               <TabsTrigger
                 key={key}
                 value={key}
@@ -74,27 +73,43 @@ export function MenuSection() {
             ))}
           </TabsList>
 
-          {Object.entries(menuCategories).map(([key, category]) => (
+          {Object.entries(categoryConfig).map(([key, category]) => (
             <TabsContent key={key} value={key} className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {category.items.map((item, index) => (
-                  <Card 
-                    key={item.name} 
-                    className="group bg-card hover:shadow-warm transition-all duration-300 border-border/50 hover:border-primary/30"
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="font-display text-xl group-hover:text-primary transition-colors">
-                        {item.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-muted-foreground text-sm leading-relaxed">
-                        {item.description}
-                      </p>
-                      <p className="font-semibold text-primary">{item.price}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardHeader className="pb-2">
+                        <div className="h-6 bg-muted rounded w-3/4"></div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="h-4 bg-muted rounded w-full"></div>
+                        <div className="h-4 bg-muted rounded w-1/3"></div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  getItemsByCategory(key).map((item) => (
+                    <Card 
+                      key={item.id} 
+                      className="group bg-card hover:shadow-warm transition-all duration-300 border-border/50 hover:border-primary/30"
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="font-display text-xl group-hover:text-primary transition-colors">
+                          {item.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          {item.description}
+                        </p>
+                        <p className="font-semibold text-primary">
+                          {item.is_available ? item.price : "Currently Unavailable"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           ))}
