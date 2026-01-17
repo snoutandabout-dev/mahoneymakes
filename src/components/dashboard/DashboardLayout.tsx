@@ -63,7 +63,14 @@ const sidebarItems: SidebarItem[] = [
       { icon: ClipboardCheck, label: "Checklist", href: "/dashboard/inventory" },
     ],
   },
-  { icon: Sparkles, label: "Specials", href: "/dashboard/specials" },
+  {
+    icon: Menu,
+    label: "Menu",
+    items: [
+      { icon: ClipboardList, label: "Regular Items", href: "/dashboard/menu" },
+      { icon: Sparkles, label: "Seasonal Specials", href: "/dashboard/specials" },
+    ],
+  },
   {
     icon: PieChart,
     label: "Financials",
