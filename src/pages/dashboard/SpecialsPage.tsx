@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Pencil, Trash2, Sparkles, TrendingUp, ImageIcon, X, GripVertical } from "lucide-react";
+import { Plus, Minus, Pencil, Trash2, Sparkles, TrendingUp, ImageIcon, X, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { ImageCropper } from "@/components/dashboard/ImageCropper";
@@ -334,6 +334,23 @@ const SpecialsPage = () => {
     }
   };
 
+  const decrementOrderCount = async (id: string) => {
+    const special = specials.find((s) => s.id === id);
+    if (!special || special.order_count <= 0) return;
+
+    const { error } = await supabase
+      .from("seasonal_specials")
+      .update({ order_count: special.order_count - 1 })
+      .eq("id", id);
+
+    if (!error) {
+      setSpecials(
+        specials.map((s) => (s.id === id ? { ...s, order_count: s.order_count - 1 } : s))
+      );
+      toast.success("Order count updated!");
+    }
+  };
+
   const closeDialog = () => {
     setIsDialogOpen(false);
     setEditingSpecial(null);
@@ -611,13 +628,23 @@ const SpecialsPage = () => {
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => incrementOrderCount(special.id)}
-                      >
-                        <Plus className="mr-1 h-3 w-3" /> Add Order
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => incrementOrderCount(special.id)}
+                        >
+                          <Plus className="mr-1 h-3 w-3" /> Add Order
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => decrementOrderCount(special.id)}
+                          disabled={special.order_count <= 0}
+                        >
+                          <Minus className="mr-1 h-3 w-3" /> Remove Order
+                        </Button>
+                      </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(special)}>
                           <Pencil className="h-4 w-4" />
