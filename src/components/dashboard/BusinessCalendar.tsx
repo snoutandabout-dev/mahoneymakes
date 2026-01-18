@@ -8,7 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  addCalendarEvent,
+  deleteCalendarEvent,
+  listEventsByMonth,
+  toggleCalendarEventComplete,
+} from "@/integrations/firebase/firestoreCalendar";
+import { listOrdersByDateRange } from "@/integrations/firebase/firestoreOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format, isSameDay, startOfMonth, endOfMonth } from "date-fns";
@@ -70,22 +76,13 @@ export function BusinessCalendar() {
     try {
       const monthStart = startOfMonth(selectedDate);
       const monthEnd = endOfMonth(selectedDate);
+      const startISO = monthStart.toISOString().split("T")[0];
+      const endISO = monthEnd.toISOString().split("T")[0];
       
-      // Fetch calendar events
-      const { data: eventsData } = await supabase
-        .from("calendar_events")
-        .select("*")
-        .gte("event_date", monthStart.toISOString().split("T")[0])
-        .lte("event_date", monthEnd.toISOString().split("T")[0])
-        .order("event_date", { ascending: true });
-
-      // Fetch orders
-      const { data: ordersData } = await supabase
-        .from("orders")
-        .select("id, customer_name, cake_type, event_date, status")
-        .gte("event_date", monthStart.toISOString().split("T")[0])
-        .lte("event_date", monthEnd.toISOString().split("T")[0])
-        .order("event_date", { ascending: true });
+      const [eventsData, ordersData] = await Promise.all([
+        listEventsByMonth(startISO, endISO),
+        listOrdersByDateRange(startISO, endISO),
+      ]);
 
       setEvents(eventsData || []);
       setOrders(ordersData || []);
@@ -103,17 +100,16 @@ export function BusinessCalendar() {
     }
 
     try {
-      const { error } = await supabase.from("calendar_events").insert({
-        user_id: user.id,
+      await addCalendarEvent({
+        user_id: user.uid,
         title: newEvent.title,
         description: newEvent.description || null,
         event_date: format(selectedDate, "yyyy-MM-dd"),
         event_time: newEvent.event_time || null,
         event_type: newEvent.event_type,
         color: newEvent.color,
+        is_completed: false,
       });
-
-      if (error) throw error;
 
       toast.success("Event added successfully");
       setIsAddDialogOpen(false);
@@ -132,13 +128,7 @@ export function BusinessCalendar() {
 
   const handleToggleComplete = async (event: CalendarEvent) => {
     try {
-      const { error } = await supabase
-        .from("calendar_events")
-        .update({ is_completed: !event.is_completed })
-        .eq("id", event.id);
-
-      if (error) throw error;
-
+      await toggleCalendarEventComplete(event.id, !event.is_completed);
       setEvents(prev =>
         prev.map(e =>
           e.id === event.id ? { ...e, is_completed: !e.is_completed } : e
@@ -151,13 +141,7 @@ export function BusinessCalendar() {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      const { error } = await supabase
-        .from("calendar_events")
-        .delete()
-        .eq("id", eventId);
-
-      if (error) throw error;
-
+      await deleteCalendarEvent(eventId);
       setEvents(prev => prev.filter(e => e.id !== eventId));
       toast.success("Event deleted");
     } catch (error) {

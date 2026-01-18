@@ -4,7 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  addInventoryItem,
+  deleteInventoryItem,
+  listInventoryItems,
+  updateInventoryItem,
+} from "@/integrations/firebase/firestoreInventory";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,51 +33,52 @@ const InventoryPage = () => {
   }, [user]);
 
   const fetchItems = async () => {
-    const { data, error } = await supabase
-      .from("inventory_checklist")
-      .select("*")
-      .order("is_checked", { ascending: true })
-      .order("created_at", { ascending: true });
-
-    if (!error) setItems(data || []);
-    setLoading(false);
+    try {
+      const data = await listInventoryItems();
+      setItems(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load inventory items");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
 
-    const { error } = await supabase.from("inventory_checklist").insert({
-      user_id: user!.id,
-      item_name: newItemName.trim(),
-    });
-
-    if (error) {
-      toast.error("Failed to add item");
-    } else {
+    try {
+      await addInventoryItem({
+        user_id: user!.uid,
+        item_name: newItemName.trim(),
+        is_checked: false,
+      });
       setNewItemName("");
       fetchItems();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add item");
     }
   };
 
   const toggleItem = async (id: string, checked: boolean) => {
-    const { error } = await supabase
-      .from("inventory_checklist")
-      .update({ is_checked: checked })
-      .eq("id", id);
-
-    if (!error) {
+    try {
+      await updateInventoryItem(id, { is_checked: checked });
       setItems(items.map((item) => (item.id === id ? { ...item, is_checked: checked } : item)));
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update item");
     }
   };
 
   const deleteItem = async (id: string) => {
-    const { error } = await supabase.from("inventory_checklist").delete().eq("id", id);
-
-    if (error) {
-      toast.error("Failed to delete item");
-    } else {
+    try {
+      await deleteInventoryItem(id);
       setItems(items.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete item");
     }
   };
 

@@ -21,7 +21,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createMenuItem,
+  deleteMenuItemById,
+  listMenuItems,
+  setMenuItemAvailability,
+  updateMenuItem,
+} from "@/integrations/firebase/firestoreMenuItems";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Pencil, Trash2, Cake, Cookie, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -64,15 +70,15 @@ const MenuItemsPage = () => {
   }, [user]);
 
   const fetchMenuItems = async () => {
-    const { data, error } = await supabase
-      .from("menu_items")
-      .select("*")
-      .order("display_order", { ascending: true });
-
-    if (!error && data) {
+    try {
+      const data = await listMenuItems();
       setMenuItems(data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load menu items");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,29 +86,21 @@ const MenuItemsPage = () => {
 
     try {
       if (editingItem) {
-        const { error } = await supabase
-          .from("menu_items")
-          .update({
-            name: formData.name,
-            description: formData.description || null,
-            category: formData.category,
-            price: formData.price,
-            is_available: formData.is_available,
-          })
-          .eq("id", editingItem.id);
-
-        if (error) {
-          toast.error("Failed to update menu item");
-          return;
-        }
+        await updateMenuItem(editingItem.id, {
+          name: formData.name,
+          description: formData.description || null,
+          category: formData.category,
+          price: formData.price,
+          is_available: formData.is_available,
+        });
         toast.success("Menu item updated successfully");
       } else {
         const maxOrder = menuItems
           .filter((item) => item.category === formData.category)
           .reduce((max, item) => Math.max(max, item.display_order), -1);
 
-        const { error } = await supabase.from("menu_items").insert({
-          user_id: user!.id,
+        await createMenuItem({
+          user_id: user!.uid,
           name: formData.name,
           description: formData.description || null,
           category: formData.category,
@@ -110,11 +108,6 @@ const MenuItemsPage = () => {
           is_available: formData.is_available,
           display_order: maxOrder + 1,
         });
-
-        if (error) {
-          toast.error("Failed to create menu item");
-          return;
-        }
         toast.success("Menu item created successfully");
       }
 
@@ -140,29 +133,28 @@ const MenuItemsPage = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this menu item?")) return;
 
-    const { error } = await supabase.from("menu_items").delete().eq("id", id);
-
-    if (error) {
-      toast.error("Failed to delete menu item");
-    } else {
+    try {
+      await deleteMenuItemById(id);
       toast.success("Menu item deleted");
       fetchMenuItems();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete menu item");
     }
   };
 
   const toggleAvailability = async (id: string, isAvailable: boolean) => {
-    const { error } = await supabase
-      .from("menu_items")
-      .update({ is_available: isAvailable })
-      .eq("id", id);
-
-    if (!error) {
+    try {
+      await setMenuItemAvailability(id, isAvailable);
       setMenuItems(
         menuItems.map((item) =>
           item.id === id ? { ...item, is_available: isAvailable } : item
         )
       );
       toast.success(isAvailable ? "Item is now available" : "Item marked as unavailable");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update availability");
     }
   };
 

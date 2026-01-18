@@ -17,7 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  listOrderRequests,
+  listRequestImages,
+  setOrderRequestStatus,
+  deleteOrderRequest,
+  convertRequestToOrder,
+} from "@/integrations/firebase/firestoreRequests";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -45,6 +51,7 @@ interface OrderRequest {
 
 export default function RequestsPage() {
   const { user } = useAuth();
+  const functionsBaseUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_BASE_URL;
   const [requests, setRequests] = useState<OrderRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,28 +68,23 @@ export default function RequestsPage() {
 
   const fetchRequests = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("order_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("Failed to load order requests");
-      console.error(error);
-    } else {
+    try {
+      const data = await listOrderRequests();
       setRequests(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load order requests");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchRequestImages = async (requestId: string) => {
-    const { data, error } = await supabase
-      .from("order_request_images")
-      .select("*")
-      .eq("request_id", requestId);
-
-    if (!error && data) {
-      setRequestImages(data);
+    try {
+      const data = await listRequestImages(requestId);
+      setRequestImages(data || []);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -93,34 +95,28 @@ export default function RequestsPage() {
   };
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from("order_requests")
-      .update({ status: newStatus })
-      .eq("id", requestId);
-
-    if (error) {
-      toast.error("Failed to update status");
-    } else {
+    try {
+      await setOrderRequestStatus(requestId, newStatus);
       toast.success(`Request marked as ${newStatus}`);
       fetchRequests();
       if (selectedRequest?.id === requestId) {
         setSelectedRequest({ ...selectedRequest, status: newStatus });
       }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update status");
     }
   };
 
   const deleteRequest = async (requestId: string) => {
-    const { error } = await supabase
-      .from("order_requests")
-      .delete()
-      .eq("id", requestId);
-
-    if (error) {
-      toast.error("Failed to delete request");
-    } else {
+    try {
+      await deleteOrderRequest(requestId);
       toast.success("Request deleted");
       setDetailDialogOpen(false);
       fetchRequests();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete request");
     }
   };
 
@@ -131,78 +127,42 @@ export default function RequestsPage() {
     }
 
     setConverting(true);
-
-    // Create order from request data
-    const { data: orderData, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        user_id: user.id,
-        customer_name: request.customer_name,
-        customer_email: request.customer_email,
-        customer_phone: request.customer_phone,
-        cake_type: request.cake_type,
-        event_type: request.event_type,
-        event_date: request.event_date,
-        servings: request.servings,
-        order_notes: request.request_details,
-        status: "pending",
-        deposit_amount: 0,
-        total_amount: 0,
-      })
-      .select()
-      .single();
-
-    if (orderError) {
-      toast.error("Failed to create order");
-      console.error(orderError);
-      setConverting(false);
-      return;
-    }
-
-    // Copy inspiration images to order vision images
-    if (requestImages.length > 0 && orderData) {
-      const visionImages = requestImages.map((img) => ({
-        order_id: orderData.id,
-        image_url: img.image_url,
-        caption: null,
-        user_id: user.id,
-      }));
-
-      await supabase.from("order_vision_images").insert(visionImages);
-    }
-
-    // Update request status to converted (we'll use "confirmed" since it's already handled)
-    await supabase
-      .from("order_requests")
-      .update({ status: "confirmed" })
-      .eq("id", request.id);
-
-    // Send order confirmation email
     try {
-      await supabase.functions.invoke("send-order-notification", {
-        body: {
-          orderId: orderData.id,
-          customerName: request.customer_name,
-          customerEmail: request.customer_email,
-          customerPhone: request.customer_phone,
-          cakeType: request.cake_type,
-          eventType: request.event_type,
-          eventDate: request.event_date,
-          servings: request.servings,
-          budget: request.budget,
-          requestDetails: request.request_details,
-          notificationType: "order_confirmed",
-        },
-      });
-    } catch (emailError) {
-      console.error("Failed to send confirmation email:", emailError);
-      // Don't fail the conversion if email fails
-    }
+      const orderId = await convertRequestToOrder(request.id, request, user.uid, requestImages);
 
-    setConverting(false);
-    setDetailDialogOpen(false);
-    toast.success("Request converted to order and confirmation sent!");
-    fetchRequests();
+      if (functionsBaseUrl) {
+        try {
+          await fetch(`${functionsBaseUrl}/send-order-notification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              customerName: request.customer_name,
+              customerEmail: request.customer_email,
+              customerPhone: request.customer_phone,
+              cakeType: request.cake_type,
+              eventType: request.event_type,
+              eventDate: request.event_date,
+              servings: request.servings,
+              budget: request.budget,
+              requestDetails: request.request_details,
+              notificationType: "order_confirmed",
+            }),
+          });
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+        }
+      }
+
+      toast.success("Request converted to order and confirmation sent!");
+      setDetailDialogOpen(false);
+      fetchRequests();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to create order");
+    } finally {
+      setConverting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {

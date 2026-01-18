@@ -19,7 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createPayment,
+  deletePaymentById,
+  listOrdersSummary,
+  listPayments,
+  listPaymentsByOrder,
+} from "@/integrations/firebase/firestorePayments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, DollarSign, Trash2 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,6 +70,7 @@ const paymentTypes = [
 
 const PaymentsPage = () => {
   const { user } = useAuth();
+  const functionsBaseUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_BASE_URL;
   const [payments, setPayments] = useState<Payment[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,56 +93,54 @@ const PaymentsPage = () => {
   }, [user]);
 
   const fetchPayments = async () => {
-    const { data, error } = await supabase
-      .from("payments")
-      .select("*")
-      .order("payment_date", { ascending: false });
-
-    if (!error) setPayments(data || []);
-    setLoading(false);
+    try {
+      const data = await listPayments();
+      setPayments(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load payments");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from("orders")
-      .select("id, customer_name, customer_email, customer_phone, cake_type, event_date, total_amount")
-      .order("created_at", { ascending: false });
-    setOrders(data || []);
+    try {
+      const data = await listOrdersSummary();
+      setOrders(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load orders");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { data: paymentData, error } = await supabase.from("payments").insert({
-      user_id: user!.id,
-      order_id: formData.order_id,
-      amount: parseFloat(formData.amount),
-      payment_type: formData.payment_type,
-      payment_method: formData.payment_method,
-      notes: formData.notes || null,
-      payment_date: formData.payment_date,
-    }).select().single();
+    try {
+      await createPayment({
+        user_id: user!.uid,
+        order_id: formData.order_id,
+        amount: parseFloat(formData.amount),
+        payment_type: formData.payment_type,
+        payment_method: formData.payment_method,
+        notes: formData.notes || null,
+        payment_date: formData.payment_date,
+      });
 
-    if (error) {
-      toast.error("Failed to record payment");
-    } else {
       toast.success("Payment recorded successfully");
-      
-      // Send payment receipt email if enabled
-      const order = orders.find(o => o.id === formData.order_id);
-      if (order && formData.sendReceipt) {
-        // Calculate total paid for this order
-        const { data: orderPayments } = await supabase
-          .from("payments")
-          .select("amount")
-          .eq("order_id", order.id);
-        
+
+      const order = orders.find((o) => o.id === formData.order_id);
+      if (order && formData.sendReceipt && functionsBaseUrl) {
+        const orderPayments = await listPaymentsByOrder(order.id);
         const totalPaid = (orderPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
         const remainingBalance = (order.total_amount || 0) - totalPaid;
 
         try {
-          const response = await supabase.functions.invoke("send-order-notification", {
-            body: {
+          await fetch(`${functionsBaseUrl}/sendOrderNotification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
               orderId: order.id,
               customerName: order.customer_name,
               customerEmail: order.customer_email,
@@ -149,21 +154,17 @@ const PaymentsPage = () => {
               notificationType: "payment_receipt",
               paymentAmount: parseFloat(formData.amount),
               paymentType: formData.payment_type,
-              paymentMethod: paymentMethods.find(m => m.value === formData.payment_method)?.label || formData.payment_method,
+              paymentMethod: paymentMethods.find((m) => m.value === formData.payment_method)?.label || formData.payment_method,
               paymentDate: formData.payment_date,
               totalPaid,
               remainingBalance: remainingBalance > 0 ? remainingBalance : 0,
-            },
+            }),
           });
-          
-          if (response.error) {
-            console.error("Failed to send payment receipt:", response.error);
-          }
         } catch (err) {
           console.error("Error sending payment receipt:", err);
         }
       }
-      
+
       fetchPayments();
       setIsDialogOpen(false);
       setFormData({
@@ -175,19 +176,22 @@ const PaymentsPage = () => {
         payment_date: format(new Date(), "yyyy-MM-dd"),
         sendReceipt: true,
       });
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to record payment");
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this payment?")) return;
 
-    const { error } = await supabase.from("payments").delete().eq("id", id);
-
-    if (error) {
-      toast.error("Failed to delete payment");
-    } else {
+    try {
+      await deletePaymentById(id);
       toast.success("Payment deleted");
       fetchPayments();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete payment");
     }
   };
 

@@ -18,7 +18,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createSupply,
+  deleteSupplyById,
+  listSupplies,
+  updateSupply,
+} from "@/integrations/firebase/firestoreSupplies";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -62,50 +67,50 @@ const SuppliesPage = () => {
   }, [user]);
 
   const fetchSupplies = async () => {
-    const { data, error } = await supabase
-      .from("supplies")
-      .select("*")
-      .order("category", { ascending: true });
-
-    if (!error) setSupplies(data || []);
-    setLoading(false);
+    try {
+      const data = await listSupplies();
+      setSupplies(data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load supplies");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const supplyData = {
-      user_id: user!.id,
+      user_id: user!.uid,
       name: formData.name,
       category: formData.category,
       unit: formData.unit,
       unit_price: parseFloat(formData.unit_price),
       current_stock: parseFloat(formData.current_stock) || 0,
       low_stock_threshold: parseFloat(formData.low_stock_threshold),
+      is_low_stock: parseFloat(formData.current_stock) <= parseFloat(formData.low_stock_threshold),
     };
 
     if (editingSupply) {
-      const { error } = await supabase
-        .from("supplies")
-        .update(supplyData)
-        .eq("id", editingSupply.id);
-
-      if (error) {
-        toast.error("Failed to update supply");
-      } else {
+      try {
+        await updateSupply(editingSupply.id, supplyData);
         toast.success("Supply updated successfully");
         closeDialog();
         fetchSupplies();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to update supply");
       }
     } else {
-      const { error } = await supabase.from("supplies").insert(supplyData);
-
-      if (error) {
-        toast.error("Failed to add supply");
-      } else {
+      try {
+        await createSupply(supplyData);
         toast.success("Supply added successfully");
         closeDialog();
         fetchSupplies();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to add supply");
       }
     }
   };
@@ -126,13 +131,13 @@ const SuppliesPage = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this supply?")) return;
 
-    const { error } = await supabase.from("supplies").delete().eq("id", id);
-
-    if (error) {
-      toast.error("Failed to delete supply");
-    } else {
+    try {
+      await deleteSupplyById(id);
       toast.success("Supply deleted");
       fetchSupplies();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete supply");
     }
   };
 

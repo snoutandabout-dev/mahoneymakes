@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { BusinessCalendar } from "@/components/dashboard/BusinessCalendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { listOrders } from "@/integrations/firebase/firestoreOrders";
+import { listPayments } from "@/integrations/firebase/firestorePayments";
+import { listSupplies } from "@/integrations/firebase/firestoreSupplies";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   ClipboardList, 
@@ -47,41 +49,36 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch orders count
-      const { count: totalOrders } = await supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true });
+      const [orders, payments, supplies] = await Promise.all([
+        listOrders(),
+        listPayments(),
+        listSupplies(),
+      ]);
 
-      // Fetch pending orders
-      const { count: pendingOrders } = await supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "in_progress"]);
+      const totalOrders = orders.length;
+      const pendingOrders = orders.filter((o) => ["pending", "in_progress"].includes(o.status)).length;
 
-      // Fetch monthly revenue (current month)
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
-      
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("amount")
-        .gte("payment_date", startOfMonth.toISOString().split('T')[0]);
-      
-      const monthlyRevenue = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const startISO = startOfMonth.toISOString().split("T")[0];
 
-      // Fetch low stock count
-      const { count: lowStockCount } = await supabase
-        .from("supplies")
-        .select("*", { count: "exact", head: true })
-        .eq("is_low_stock", true);
+      const monthlyRevenue = payments
+        .filter((p) => p.payment_date >= startISO)
+        .reduce((sum, p) => sum + Number(p.amount), 0);
 
-      // Fetch recent orders
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("id, customer_name, cake_type, event_date, status")
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const lowStockCount = supplies.filter((s) => s.is_low_stock).length;
+
+      const recentOrders = orders
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+        .slice(0, 5)
+        .map((o) => ({
+          id: (o as any).id,
+          customer_name: o.customer_name,
+          cake_type: o.cake_type,
+          event_date: o.event_date,
+          status: o.status,
+        }));
 
       setStats({
         totalOrders: totalOrders || 0,

@@ -19,7 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createOrder,
+  deleteOrderCascade,
+  listOrders,
+  listVisionImages,
+  updateOrder,
+} from "@/integrations/firebase/firestoreOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Calendar, Search, Eye, ImageIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
@@ -107,27 +113,19 @@ const OrdersPage = () => {
   }, [user]);
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .order("event_date", { ascending: true });
-
-    if (error) {
+    try {
+      const [orderData, visionData] = await Promise.all([
+        listOrders(),
+        listVisionImages(),
+      ]);
+      setOrders(orderData || []);
+      setVisionImages(visionData || []);
+    } catch (error) {
+      console.error(error);
       toast.error("Failed to fetch orders");
-    } else {
-      setOrders(data || []);
+    } finally {
+      setLoading(false);
     }
-    
-    // Fetch vision images
-    const { data: imagesData } = await supabase
-      .from("order_vision_images")
-      .select("*");
-    
-    if (imagesData) {
-      setVisionImages(imagesData);
-    }
-    
-    setLoading(false);
   };
 
   const getOrderVisionImages = (orderId: string) => {
@@ -138,7 +136,7 @@ const OrdersPage = () => {
     e.preventDefault();
     
     const orderData = {
-      user_id: user!.id,
+      user_id: user!.uid,
       customer_name: formData.customer_name,
       customer_email: formData.customer_email || null,
       customer_phone: formData.customer_phone,
@@ -153,27 +151,24 @@ const OrdersPage = () => {
     };
 
     if (selectedOrder) {
-      const { error } = await supabase
-        .from("orders")
-        .update(orderData)
-        .eq("id", selectedOrder.id);
-
-      if (error) {
-        toast.error("Failed to update order");
-      } else {
+      try {
+        await updateOrder(selectedOrder.id, orderData);
         toast.success("Order updated successfully");
         fetchOrders();
         closeDialog();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to update order");
       }
     } else {
-      const { error } = await supabase.from("orders").insert(orderData);
-
-      if (error) {
-        toast.error("Failed to create order");
-      } else {
+      try {
+        await createOrder(orderData);
         toast.success("Order created successfully");
         fetchOrders();
         closeDialog();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to create order");
       }
     }
   };
@@ -219,16 +214,7 @@ const OrdersPage = () => {
     
     setIsDeleting(true);
     try {
-      // Delete related records first (vision images, supplies, payments)
-      await supabase.from("order_vision_images").delete().eq("order_id", orderToDelete.id);
-      await supabase.from("order_supplies").delete().eq("order_id", orderToDelete.id);
-      await supabase.from("payments").delete().eq("order_id", orderToDelete.id);
-      
-      // Delete the order
-      const { error } = await supabase.from("orders").delete().eq("id", orderToDelete.id);
-      
-      if (error) throw error;
-      
+      await deleteOrderCascade(orderToDelete.id);
       toast.success("Order deleted successfully");
       fetchOrders();
     } catch (error) {
